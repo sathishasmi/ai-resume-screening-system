@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resume Analyzer</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f7fa;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 80px;
+        }
+
+        button {
+            padding: 10px;
+            width: 100%;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #result {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chart-box {
+            width: 250px;
+            height: 150px;
+            margin-top: 15px;
+        }
+
+        .bar-box {
+            width: 300px;
+            height: 200px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📄 Resume Analyzer</h1>
+
+<form id="form">
+    <input type="file" id="file" required><br><br>
+
+    <textarea id="job_desc" placeholder="Enter job description..." required></textarea><br><br>
+
+    <button type="submit">Analyze</button>
+</form>
+
+<div id="result"></div>
+
+</div>
+
+<script>
+let chart;
+let gaugeChart;
+
+document.getElementById("form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    let formData = new FormData();
+    formData.append("file", document.getElementById("file").files[0]);
+    formData.append("job_desc", document.getElementById("job_desc").value);
+
+    const res = await fetch("/analyze", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await res.json();
+
+    const resultDiv = document.getElementById("result");
+
+    resultDiv.innerHTML = `
+        <h3>📊 Analysis Result</h3>
+
+        <p><b>🎯 Domain:</b> ${data.predicted_domain}</p>
+        <p><b>Confidence:</b> ${data.confidence}</p>
+
+        <h3>ATS Score: ${data.match_score}%</h3>
+
+        <div class="chart-box">
+            <canvas id="gaugeChart"></canvas>
+        </div>
+
+        <p><b>Similarity:</b> ${data.similarity_score}%</p>
+        <p><b>Skill Score:</b> ${data.skill_score}%</p>
+
+        <p><b>Missing Skills:</b> 
+        ${data.missing_skills.length ? data.missing_skills.join(", ") : "None 🎉"}</p>
+
+        <p><b>Reason:</b> ${data.reason}</p>
+
+        <div class="bar-box">
+            <canvas id="barChart"></canvas>
+        </div>
+    `;
+
+    // 🔥 GAUGE CHART (SMALL)
+    const gaugeCtx = document.getElementById("gaugeChart").getContext("2d");
+
+    if (gaugeChart) gaugeChart.destroy();
+
+    let score = data.match_score;
+
+    gaugeChart = new Chart(gaugeCtx, {
+        type: "doughnut",
+        data: {
+            datasets: [{
+                data: [score, 100 - score],
+                backgroundColor: [
+                    score >= 75 ? "#4CAF50" : score >= 50 ? "#FFC107" : "#F44336",
+                    "#e0e0e0"
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            rotation: -90,
+            circumference: 180,
+            cutout: "70%",
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        }
+    });
+
+    // 🔥 BAR CHART (SMALL)
+    const labels = data.top_predictions.map(p => p.domain);
+    const scores = data.top_predictions.map(p => p.score);
+
+    const barCtx = document.getElementById("barChart").getContext("2d");
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(barCtx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Prediction Score (%)",
+                data: scores
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+});
+</script>
+
+</body>
+</html>
