@@ -48,7 +48,7 @@
             margin-top: 20px;
         }
 
-        /* 🔥 Gradient ATS Bar */
+        /* Gauge */
         .gauge-container {
             position: relative;
             width: 100%;
@@ -64,7 +64,6 @@
             background: linear-gradient(to right, red, orange, yellow, green);
         }
 
-        /* 🔻 Pointer */
         .gauge-pointer {
             position: absolute;
             top: -10px;
@@ -87,19 +86,19 @@
 <body>
 
 <div class="container">
+    <h1>📄 Resume Analyzer</h1>
 
-<h1>📄 Resume Analyzer</h1>
+    <!-- FIXED: added name attributes -->
+    <form id="form">
+        <input type="file" id="file" name="file" required><br><br>
 
-<form id="form">
-    <input type="file" id="file" required><br><br>
+        <textarea id="job_desc" name="job_desc"
+            placeholder="Enter job description..." required></textarea><br><br>
 
-    <textarea id="job_desc" placeholder="Enter job description..." required></textarea><br><br>
+        <button type="submit">Analyze</button>
+    </form>
 
-    <button type="submit">Analyze</button>
-</form>
-
-<div id="result"></div>
-
+    <div id="result"></div>
 </div>
 
 <script>
@@ -108,7 +107,12 @@ let chart;
 document.getElementById("form").addEventListener("submit", async function(e) {
     e.preventDefault();
 
-    let formData = new FormData();
+    const resultDiv = document.getElementById("result");
+
+    // Loading state
+    resultDiv.innerHTML = "⏳ Analyzing...";
+
+    const formData = new FormData();
     formData.append("file", document.getElementById("file").files[0]);
     formData.append("job_desc", document.getElementById("job_desc").value);
 
@@ -117,9 +121,19 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         body: formData
     });
 
+    // Error handling
+    if (!res.ok) {
+        resultDiv.innerHTML = "❌ Error analyzing resume";
+        return;
+    }
+
     const data = await res.json();
 
-    const resultDiv = document.getElementById("result");
+    if (data.error) {
+        document.getElementById("result").innerHTML =
+            `<p style="color:red;">Error: ${data.error}</p>`;
+        return;
+    }
 
     resultDiv.innerHTML = `
         <h3>📊 Analysis Result</h3>
@@ -139,8 +153,11 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         <p><b>Similarity:</b> ${data.similarity_score}%</p>
         <p><b>Skill Score:</b> ${data.skill_score}%</p>
 
-        <p><b>Missing Skills:</b> 
-        ${data.missing_skills.length ? data.missing_skills.join(", ") : "None 🎉"}</p>
+        <p><b>Missing Skills:</b>
+            ${data.missing_skills.length
+                ? data.missing_skills.join(", ")
+                : "None 🎉"}
+        </p>
 
         <p><b>Reason:</b> ${data.reason}</p>
 
@@ -149,46 +166,37 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         </div>
     `;
 
-    // 🔥 POINTER POSITION
+    // Pointer position
     const score = data.match_score;
     const pointer = document.getElementById("pointer");
+    pointer.style.left = `calc(${score}% - 8px)`;
 
-    setTimeout(() => {
-        pointer.style.left = `calc(${score}% - 8px)`;
-    }, 100);
-
-    // 🔥 BAR CHART WITH LABELS
+    // Chart
     const labels = data.top_predictions.map(p => p.domain);
     const scores = data.top_predictions.map(p => p.score);
 
-    const barCtx = document.getElementById("barChart").getContext("2d");
+    const ctx = document.getElementById("barChart").getContext("2d");
 
     if (chart) chart.destroy();
 
-    chart = new Chart(barCtx, {
+    chart = new Chart(ctx, {
         type: "bar",
         data: {
             labels: labels,
             datasets: [{
                 label: "Prediction Score (%)",
-                data: scores,
-                backgroundColor: ["#4CAF50", "#FFC107", "#F44336"]
+                data: scores
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-
-                // 🔥 SHOW SCORE ON TOP
                 datalabels: {
                     anchor: 'end',
                     align: 'top',
-                    formatter: (value) => value + "%",
-                    font: {
-                        weight: 'bold'
-                    }
+                    formatter: value => value + "%",
+                    font: { weight: 'bold' }
                 }
             },
             scales: {
