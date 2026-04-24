@@ -3,17 +3,14 @@
 <head>
     <title>Resume Analyzer</title>
 
-    <!-- Chart.js -->
+    <!-- Chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Data Labels Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
     <style>
         body {
             font-family: Arial;
             background: #f5f7fa;
-            margin: 0;
         }
 
         .container {
@@ -29,37 +26,35 @@
             text-align: center;
         }
 
-        textarea {
+        select, textarea, input {
             width: 100%;
-            height: 80px;
+            margin-top: 10px;
+            padding: 8px;
         }
 
         button {
+            margin-top: 15px;
             padding: 10px;
             width: 100%;
             background: #007BFF;
             color: white;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
         }
 
         #result {
             margin-top: 20px;
         }
 
-        /* Gauge */
         .gauge-container {
             position: relative;
-            width: 100%;
             height: 40px;
             border-radius: 20px;
             overflow: hidden;
-            margin-top: 15px;
+            margin-top: 10px;
         }
 
         .gauge-bar {
-            width: 100%;
             height: 100%;
             background: linear-gradient(to right, red, orange, yellow, green);
         }
@@ -72,13 +67,6 @@
             border-left: 8px solid transparent;
             border-right: 8px solid transparent;
             border-bottom: 20px solid black;
-            transition: left 0.4s ease;
-        }
-
-        .bar-box {
-            width: 100%;
-            height: 250px;
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -88,12 +76,14 @@
 <div class="container">
     <h1>📄 Resume Analyzer</h1>
 
-    <!-- FIXED: added name attributes -->
     <form id="form">
-        <input type="file" id="file" name="file" required><br><br>
+        <input type="file" id="file" required>
 
-        <textarea id="job_desc" name="job_desc"
-            placeholder="Enter job description..." required></textarea><br><br>
+        <!-- NEW: JOB DROPDOWN -->
+        <label>Select Job:</label>
+        <select id="job_id" required>
+            <option value="">Loading jobs...</option>
+        </select>
 
         <button type="submit">Analyze</button>
     </form>
@@ -104,100 +94,109 @@
 <script>
 let chart;
 
+// ----------------------------
+// LOAD JOBS (VERY IMPORTANT)
+// ----------------------------
+async function loadJobs() {
+    const res = await fetch("/jobs");
+    const jobs = await res.json();
+
+    let dropdown = document.getElementById("job_id");
+    dropdown.innerHTML = "";
+
+    jobs.forEach(job => {
+        dropdown.innerHTML += `
+            <option value="${job.id}">
+                ${job.title}
+            </option>
+        `;
+    });
+}
+
+loadJobs();
+
+
+// ----------------------------
+// FORM SUBMIT
+// ----------------------------
 document.getElementById("form").addEventListener("submit", async function(e) {
     e.preventDefault();
 
     const resultDiv = document.getElementById("result");
-
-    // Loading state
     resultDiv.innerHTML = "⏳ Analyzing...";
 
     const formData = new FormData();
     formData.append("file", document.getElementById("file").files[0]);
-    formData.append("job_desc", document.getElementById("job_desc").value);
+    formData.append("job_id", document.getElementById("job_id").value);
 
     const res = await fetch("/analyze", {
         method: "POST",
         body: formData
     });
 
-    // Error handling
-    if (!res.ok) {
-        resultDiv.innerHTML = "❌ Error analyzing resume";
-        return;
-    }
-
     const data = await res.json();
 
     if (data.error) {
-        document.getElementById("result").innerHTML =
-            `<p style="color:red;">Error: ${data.error}</p>`;
+        resultDiv.innerHTML = `<p style="color:red">${data.error}</p>`;
         return;
     }
 
+    // ----------------------------
+    // UI OUTPUT
+    // ----------------------------
     resultDiv.innerHTML = `
-        <h3>📊 Analysis Result</h3>
-
-        <p><b>🎯 Domain:</b> ${data.predicted_domain}</p>
-        <p><b>Confidence:</b> ${data.confidence}</p>
-
-        <h3 style="text-align:center;">
-            ATS Score: <span id="scoreText">${data.match_score}</span>%
-        </h3>
+        <h3>📊 Result</h3>
+        <p><b>Name:</b> ${data.name}</p>
+        <p><b>Job:</b> ${data.job}</p>
+        <p><b>Score:</b> ${data.score}%</p>
 
         <div class="gauge-container">
             <div class="gauge-bar"></div>
             <div class="gauge-pointer" id="pointer"></div>
         </div>
 
-        <p><b>Similarity:</b> ${data.similarity_score}%</p>
-        <p><b>Skill Score:</b> ${data.skill_score}%</p>
-
-        <p><b>Missing Skills:</b>
-            ${data.missing_skills.length
-                ? data.missing_skills.join(", ")
-                : "None 🎉"}
+        <p><b>Missing Skills:</b> 
+        ${data.missing_skills.length ? data.missing_skills.join(", ") : "None"}
         </p>
 
-        <p><b>Reason:</b> ${data.reason}</p>
-
-        <div class="bar-box">
-            <canvas id="barChart"></canvas>
-        </div>
+        <canvas id="chart"></canvas>
     `;
 
-    // Pointer position
-    const score = data.match_score;
-    const pointer = document.getElementById("pointer");
-    pointer.style.left = `calc(${score}% - 8px)`;
+    // Pointer
+    document.getElementById("pointer").style.left = `calc(${data.score}% - 8px)`;
 
     // Chart
-    const labels = data.top_predictions.map(p => p.domain);
-    const scores = data.top_predictions.map(p => p.score);
+// ===== CHART FIX =====
+    const ctx = document.getElementById("chart").getContext("2d");
 
-    const ctx = document.getElementById("barChart").getContext("2d");
+    // destroy old chart
+    if (window.chart) {
+        window.chart.destroy();
+    }
 
-    if (chart) chart.destroy();
+    // check data
+    console.log("TOP DOMAINS:", data.top_domains);
 
-    chart = new Chart(ctx, {
+    // extract labels + values
+    const labels = data.top_domains.map(d => d.domain);
+    const values = data.top_domains.map(d => d.score);
+
+    // create chart
+    window.chart = new Chart(ctx, {
         type: "bar",
         data: {
             labels: labels,
             datasets: [{
-                label: "Prediction Score (%)",
-                data: scores
+                label: "Match %",
+                data: values,
+                backgroundColor: ["#4CAF50", "#FFC107", "#F44336"],
+                borderRadius: 8
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    formatter: value => value + "%",
-                    font: { weight: 'bold' }
-                }
+                legend: { display: false }
             },
             scales: {
                 y: {
@@ -205,10 +204,8 @@ document.getElementById("form").addEventListener("submit", async function(e) {
                     max: 100
                 }
             }
-        },
-        plugins: [ChartDataLabels]
+        }
     });
-
 });
 </script>
 

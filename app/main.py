@@ -1,7 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.templating import Jinja2Templates
+
+import os
 
 # Routers
 from app.api.candidate import router as candidate_router
@@ -9,21 +12,36 @@ from app.api.recruiter import router as recruiter_router
 
 app = FastAPI()
 
-# Templates
-templates = Jinja2Templates(directory="app/templates")
-
-# Static files (optional but recommended)
-#app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
+# -----------------------------
+# CORS (IMPORTANT)
+# -----------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # -----------------------------
-# Home Page (Candidate UI)
+# Templates
+# -----------------------------
+templates = Jinja2Templates(directory="app/templates")
+
+# -----------------------------
+# Static files (optional)
+# -----------------------------
+if os.path.exists("app/static"):
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# -----------------------------
+# Routes (UI Pages)
 # -----------------------------
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse(
         request,
-        "index.html",   # ✅ correct position
+        "index.html",
         {"request": request}
     )
 
@@ -36,12 +54,15 @@ async def recruiter_page(request: Request):
     )
 
 # -----------------------------
-# Include Routers
+# Include APIs
 # -----------------------------
 app.include_router(candidate_router)
 app.include_router(recruiter_router)
 
+# -----------------------------
+# DB Init
+# -----------------------------
 from app.core.database import Base, engine
-from app.models import candidate, analysis
+from app.models import candidate, analysis, job
 
 Base.metadata.create_all(bind=engine)

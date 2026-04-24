@@ -1,176 +1,47 @@
 <!DOCTYPE html>
-
 <html>
 <head>
     <title>Recruiter Dashboard</title>
-
-```
-<style>
-    body {
-        font-family: Arial;
-        background: #f5f7fa;
-        padding: 20px;
-    }
-
-    h2 {
-        margin-bottom: 10px;
-    }
-
-    button {
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        cursor: pointer;
-        border-radius: 5px;
-    }
-
-    button:hover {
-        background: #0056b3;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-        background: white;
-    }
-
-    th, td {
-        padding: 10px;
-        border: 1px solid #ddd;
-        text-align: center;
-    }
-
-    th {
-        background: #007bff;
-        color: white;
-    }
-
-    tr:hover {
-        background: #f1f1f1;
-    }
-
-    input {
-        padding: 5px;
-    }
-
-    .badge {
-        padding: 5px 8px;
-        border-radius: 5px;
-        color: white;
-    }
-
-    .yes {
-        background: green;
-    }
-
-    .no {
-        background: red;
-    }
-</style>
-```
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
 
-<h2>👨‍💼 Recruiter Dashboard</h2>
+<h2>Recruiter Dashboard</h2>
 
-<button id="loadBtn" onclick="loadCandidates()">Load Candidates</button>
-
-<div id="tableContainer"></div>
-
-<script>
-
-async function loadCandidates() {
-
-    const btn = document.getElementById("loadBtn");
-    btn.innerText = "Loading...";
-
-    const res = await fetch("/recruiter/candidates");
-    const data = await res.json();
-
-    btn.innerText = "Load Candidates";
-
-    let html = `
-    <table>
+<table border="1" id="table">
+    <thead>
         <tr>
             <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
+            <th>Job</th>
             <th>Score</th>
-            <th>Domain</th>
             <th>Missing Skills</th>
             <th>Status</th>
-            <th>Select</th>
         </tr>
-    `;
+    </thead>
+    <tbody></tbody>
+</table>
 
-    data.forEach(c => {
+<script>
+async function loadDashboard() {
+    const res = await fetch("/recruiter/dashboard");
+    const data = await res.json();
 
-        html += `
+    const tbody = document.querySelector("#table tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(d => {
+        tbody.innerHTML += `
         <tr>
-            <td>${c.name}</td>
-            <td>${c.email}</td>
-            <td>${c.phone}</td>
-            <td>${c.score}%</td>
-            <td>${c.domain}</td>
-            <td>${c.missing_skills}</td>
-
-            <td>
-             ${
-                c.selected == 1 
-                ? '<span style="color:green;font-weight:bold;">Shortlisted</span>'
-                : c.selected == -1
-                ? '<span style="color:red;font-weight:bold;">Rejected</span>'
-                : '<span style="color:orange;font-weight:bold;">Pending</span>'
-            }
-            </td>
-
-           <td>
-            <input type="text" id="reason-${c.id}" placeholder="Reason">
-
-            <button onclick="decideCandidate(${c.id}, 'shortlist')" 
-                style="background: green; color: white; margin-right:5px;">
-                Shortlist
-            </button>
-
-            <button onclick="decideCandidate(${c.id}, 'reject')" 
-                style="background: red; color: white;">
-                Reject
-            </button>
-            </td>
-        </tr>
-        `;
+            <td>${d.name}</td>
+            <td>${d.job}</td>
+            <td>${d.score}%</td>
+            <td>${d.missing_skills}</td>
+            <td>${d.status ? "Selected" : "Pending"}</td>
+        </tr>`;
     });
-
-    html += "</table>";
-
-    document.getElementById("tableContainer").innerHTML = html;
 }
 
-
-async function decideCandidate(id, action) {
-    let reason = document.getElementById(`reason-${id}`).value;
-
-    await fetch("/recruiter/decision", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            id: id,
-            action: action,
-            reason: reason
-        })
-    });
-
-    alert("Updated ✅");
-
-    loadCandidates();
-}
-
+loadDashboard();
 </script>
 
 </body>
