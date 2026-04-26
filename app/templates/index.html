@@ -8,10 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
     <style>
-        body {
-            font-family: Arial;
-            background: #f5f7fa;
-        }
+        body { font-family: Arial; background: #f5f7fa; }
 
         .container {
             max-width: 650px;
@@ -22,9 +19,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        h1 {
-            text-align: center;
-        }
+        h1 { text-align: center; }
 
         select, textarea, input {
             width: 100%;
@@ -42,9 +37,7 @@
             border-radius: 5px;
         }
 
-        #result {
-            margin-top: 20px;
-        }
+        #result { margin-top: 20px; }
 
         .gauge-container {
             position: relative;
@@ -79,7 +72,6 @@
     <form id="form">
         <input type="file" id="file" required>
 
-        <!-- NEW: JOB DROPDOWN -->
         <label>Select Job:</label>
         <select id="job_id" required>
             <option value="">Loading jobs...</option>
@@ -93,10 +85,9 @@
 
 <script>
 let chart;
+let globalData; // 🔥 store analyze data
 
-// ----------------------------
-// LOAD JOBS (VERY IMPORTANT)
-// ----------------------------
+// LOAD JOBS
 async function loadJobs() {
     const res = await fetch("/jobs");
     const jobs = await res.json();
@@ -105,20 +96,13 @@ async function loadJobs() {
     dropdown.innerHTML = "";
 
     jobs.forEach(job => {
-        dropdown.innerHTML += `
-            <option value="${job.id}">
-                ${job.title}
-            </option>
-        `;
+        dropdown.innerHTML += `<option value="${job.id}">${job.title}</option>`;
     });
 }
-
 loadJobs();
 
 
-// ----------------------------
 // FORM SUBMIT
-// ----------------------------
 document.getElementById("form").addEventListener("submit", async function(e) {
     e.preventDefault();
 
@@ -135,15 +119,13 @@ document.getElementById("form").addEventListener("submit", async function(e) {
     });
 
     const data = await res.json();
+    globalData = data; // 🔥 store
 
     if (data.error) {
         resultDiv.innerHTML = `<p style="color:red">${data.error}</p>`;
         return;
     }
 
-    // ----------------------------
-    // UI OUTPUT
-    // ----------------------------
     resultDiv.innerHTML = `
         <h3>📊 Result</h3>
         <p><b>Name:</b> ${data.name}</p>
@@ -159,30 +141,24 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         ${data.missing_skills.length ? data.missing_skills.join(", ") : "None"}
         </p>
 
+        <!-- 🔥 APPLY BUTTON -->
+        <button id="applyBtn">Apply Job</button>
+
         <canvas id="chart"></canvas>
     `;
 
     // Pointer
     document.getElementById("pointer").style.left = `calc(${data.score}% - 8px)`;
 
-    // Chart
-// ===== CHART FIX =====
+    // CHART
     const ctx = document.getElementById("chart").getContext("2d");
 
-    // destroy old chart
-    if (window.chart) {
-        window.chart.destroy();
-    }
+    if (chart) chart.destroy();
 
-    // check data
-    console.log("TOP DOMAINS:", data.top_domains);
-
-    // extract labels + values
     const labels = data.top_domains.map(d => d.domain);
     const values = data.top_domains.map(d => d.score);
 
-    // create chart
-    window.chart = new Chart(ctx, {
+    chart = new Chart(ctx, {
         type: "bar",
         data: {
             labels: labels,
@@ -196,7 +172,15 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+
+                // 🔥 SHOW PERCENTAGE ON BAR
+                datalabels: {
+                    anchor: "end",
+                    align: "top",
+                    formatter: value => value + "%",
+                    font: { weight: "bold" }
+                }
             },
             scales: {
                 y: {
@@ -204,8 +188,29 @@ document.getElementById("form").addEventListener("submit", async function(e) {
                     max: 100
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
+
+    // APPLY BUTTON CLICK
+    document.getElementById("applyBtn").addEventListener("click", async () => {
+
+        const formData = new FormData();
+        formData.append("name", globalData.name);
+        formData.append("email", globalData.email);
+        formData.append("phone", globalData.phone);
+        formData.append("job_id", globalData.job_id);
+        formData.append("score", globalData.score);
+
+        const res = await fetch("/apply", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await res.json();
+        alert(result.message);
+    });
+
 });
 </script>
 

@@ -14,6 +14,9 @@ from app.models.job import Job
 router = APIRouter()
 
 
+# ============================
+# ANALYZE (NO DB SAVE HERE)
+# ============================
 @router.post("/analyze")
 async def analyze(
     file: UploadFile = File(...),
@@ -22,26 +25,19 @@ async def analyze(
     db = SessionLocal()
 
     try:
-        # =========================
-        # Save uploaded file
-        # =========================
+        # Save file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
             temp.write(await file.read())
             temp_path = temp.name
 
-        # =========================
-        # Parse Resume
-        # =========================
+        # Parse resume
         parsed = parse_resume(temp_path)
-
         text = parsed.get("text", "")
         name = parsed.get("name", "Unknown")
         email = parsed.get("email", "Not Found")
         phone = parsed.get("phone", "Not Found")
 
-        # =========================
-        # Get Job from DB
-        # =========================
+        # Get job
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             return {"error": "Job not found"}
@@ -49,14 +45,12 @@ async def analyze(
         job_desc = str(job.description)
         job_title = str(job.title)
 
-        # =========================
-        # Extract Resume Skills
-        # =========================
+        # Extract skills
         resume_skills = extract_skills(text)
 
-        # =========================
-        # 🔥 TOP 3 DOMAIN MATCH LOGIC
-        # =========================
+        # ============================
+        # TOP 3 DOMAIN LOGIC
+        # ============================
         domain_scores = {}
 
         for domain, skills in SKILLS_DB.items():
@@ -76,13 +70,12 @@ async def analyze(
             score = (match_count / len(job_set)) * 100 if job_set else 0
             domain_scores[domain] = round(score, 2)
 
-        # Sort and get top 3
         sorted_domains = sorted(domain_scores.items(), key=lambda x: x[1], reverse=True)
         top_domains = sorted_domains[:3]
 
-        # =========================
-        # Matching with selected job
-        # =========================
+        # ============================
+        # MATCHING SCORE
+        # ============================
         job_skills = extract_skills(job_desc)
 
         similarity = compute_similarity(text, job_desc)
@@ -90,48 +83,16 @@ async def analyze(
 
         score = final_score(similarity, skill_score)
 
-        # =========================
-        # Save Candidate
-        # =========================
-        candidate = Candidate(
-            name=name,
-            email=email,
-            phone=phone,
-            resume_file=temp_path,
-            job_id=job_id
-        )
-
-        db.add(candidate)
-        db.commit()
-        db.refresh(candidate)
-
-        # =========================
-        # Save Analysis
-        # =========================
-        analysis = Analysis(
-            candidate_id=candidate.id,
-            domain=job_title,
-            score=round(score, 2),
-            missing_skills=", ".join(missing),
-            selected=0,
-            selection_reason=""
-        )
-
-        db.add(analysis)
-        db.commit()
-
-        # =========================
-        # Response (IMPORTANT)
-        # =========================
         return {
             "name": name,
+            "email": email,
+            "phone": phone,
             "job": job_title,
+            "job_id": job_id,
             "score": round(score, 2),
-            "similarity": round(similarity, 2),
-            "skill_score": round(skill_score, 2),
             "missing_skills": missing,
 
-            # 🔥 NEW (for chart)
+            # 🔥 IMPORTANT FOR CHART
             "top_domains": [
                 {"domain": d[0], "score": d[1]} for d in top_domains
             ]
@@ -139,6 +100,69 @@ async def analyze(
 
     except Exception as e:
         return {"error": str(e)}
+
+    finally:
+        db.close()
+
+
+# ============================
+# APPLY (SAVE TO DB HERE)
+# ============================
+@router.post("/apply")
+async def apply_candidate(
+    name: str = Form(...),
+    email: str = Form(...),
+    phone: str = Form(...),
+    job_id: int = Form(...),
+    score: float = Form(...)
+):
+    db = SessionLocal()
+
+    try:
+        print("APPLY STARTED")
+
+        score = float(score)
+
+        print("APPLY DATA:", name, email, phone, job_id, score)
+
+        # duplicate check
+        existing = db.query(Candidate).filter(
+            Candidate.email == email,
+            Candidate.job_id == job_id
+        ).first()
+
+        if existing:
+            return {"message": "Already Applied ❌"}
+
+        # save candidate
+        candidate = Candidate(
+            name=name,
+            email=email,
+            phone=phone,
+            job_id=job_id
+        )
+
+        db.add(candidate)
+        db.commit()
+        db.refresh(candidate)
+
+        # save analysis
+        analysis = Analysis(
+            candidate_id=candidate.id,
+            score=score,
+            selected=1 if score > 70 else 0
+        )
+
+        db.add(analysis)
+        db.commit()
+
+        print("SAVED SUCCESSFULLY ✅")
+
+        return {"message": "Application Submitted Successfully ✅"}
+
+    except Exception as e:
+        print("ERROR:", e)
+        return {"message": str(e)}
 
     finally:
         db.close()

@@ -58,7 +58,6 @@ async def recruiter_page(request: Request):
 # -----------------------------
 app.include_router(candidate_router)
 app.include_router(recruiter_router)
-
 # -----------------------------
 # DB Init
 # -----------------------------
@@ -66,3 +65,4 @@ from app.core.database import Base, engine
 from app.models import candidate, analysis, job
 
 Base.metadata.create_all(bind=engine)
+print("TABLES CREATED")
