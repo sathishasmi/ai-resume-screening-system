@@ -7,11 +7,10 @@ class Candidate(Base):
     __tablename__ = "candidates"
 
     id = Column(Integer, primary_key=True, index=True)
-
     name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
+    email = Column(String(255), nullable=False)
     phone = Column(String(20))
-    resume_file = Column(String(255), nullable=False)
-
-    # 🔥 NEW: link to job
-    job_id = Column(Integer, ForeignKey("jobs.id"))
+    score = Column(Integer)
+    domain = Column(String(255))
+    missing_skills = Column(String)
+    selected = Column(Boolean, default=False)

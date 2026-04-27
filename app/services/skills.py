@@ -22,7 +22,7 @@ def extract_skills(text):
     all_skills = list(set(all_skills))
 
     for skill in all_skills:
-        pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+        ppattern = re.escape(skill.lower())
         if re.search(pattern, text):
             found_skills.add(skill.lower())
 

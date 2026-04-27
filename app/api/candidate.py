@@ -114,16 +114,13 @@ async def apply_candidate(
     email: str = Form(...),
     phone: str = Form(...),
     job_id: int = Form(...),
-    score: float = Form(...)
+    score: float = Form(...),
+    job: str = Form(...),
+    missing_skills: str = Form(...)
 ):
     db = SessionLocal()
 
     try:
-        print("APPLY STARTED")
-
-        score = float(score)
-
-        print("APPLY DATA:", name, email, phone, job_id, score)
 
         # duplicate check
         existing = db.query(Candidate).filter(
@@ -139,24 +136,15 @@ async def apply_candidate(
             name=name,
             email=email,
             phone=phone,
-            job_id=job_id
+            job_id=job_id,
+            score=score,
+            domain=job,
+            missing_skills=missing_skills
+            
         )
 
         db.add(candidate)
         db.commit()
-        db.refresh(candidate)
-
-        # save analysis
-        analysis = Analysis(
-            candidate_id=candidate.id,
-            score=score,
-            selected=1 if score > 70 else 0
-        )
-
-        db.add(analysis)
-        db.commit()
-
-        print("SAVED SUCCESSFULLY ✅")
 
         return {"message": "Application Submitted Successfully ✅"}
 
