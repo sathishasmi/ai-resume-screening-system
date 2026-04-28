@@ -141,8 +141,10 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         ${data.missing_skills.length ? data.missing_skills.join(", ") : "None"}
         </p>
 
-        <!-- 🔥 APPLY BUTTON -->
         <button id="applyBtn">Apply Job</button>
+        <h3 style="text-align:center; margin-top:20px; margin-bottom:10px;">
+            Top Matching Domains (Based on Resume)
+        </h3>
 
         <canvas id="chart"></canvas>
     `;
@@ -174,7 +176,6 @@ document.getElementById("form").addEventListener("submit", async function(e) {
             plugins: {
                 legend: { display: false },
 
-                // 🔥 SHOW PERCENTAGE ON BAR
                 datalabels: {
                     anchor: "end",
                     align: "top",
@@ -197,10 +198,11 @@ document.getElementById("form").addEventListener("submit", async function(e) {
 
         const formData = new FormData();
         formData.append("name", globalData.name);
-        formData.append("email", globalData.email);
-        formData.append("phone", globalData.phone);
-        formData.append("job_id", globalData.job_id);
+        formData.append("email", globalData.email || "Not Provided");
+        formData.append("phone", globalData.phone || "Not Provided");
+        formData.append("job_title",globalData.job_title);
         formData.append("score", globalData.score);
+        formData.append("missing_skills", globalData.missing_skills.join(", "));
 
         const res = await fetch("/apply", {
             method: "POST",
@@ -208,7 +210,11 @@ document.getElementById("form").addEventListener("submit", async function(e) {
         });
 
         const result = await res.json();
-        alert(result.message);
+        alert(
+        result.message || 
+        JSON.stringify(result.detail) || 
+        "Something went wrong"
+        );
     });
 
 });

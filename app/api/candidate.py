@@ -8,11 +8,17 @@ from app.services.matcher import compute_similarity, final_score, skill_match
 
 from app.core.database import SessionLocal
 from app.models.candidate import Candidate
-from app.models.analysis import Analysis
 from app.models.job import Job
+from typing import Optional
 
 router = APIRouter()
 
+@router.get("/jobs")
+def get_jobs():
+    db = SessionLocal()
+    jobs = db.query(Job).all()
+    db.close()
+    return jobs
 
 # ============================
 # ANALYZE (NO DB SAVE HERE)
@@ -87,12 +93,10 @@ async def analyze(
             "name": name,
             "email": email,
             "phone": phone,
-            "job": job_title,
-            "job_id": job_id,
+            "job_title": job_title,
             "score": round(score, 2),
             "missing_skills": missing,
-
-            # 🔥 IMPORTANT FOR CHART
+            
             "top_domains": [
                 {"domain": d[0], "score": d[1]} for d in top_domains
             ]
@@ -113,10 +117,9 @@ async def apply_candidate(
     name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
-    job_id: int = Form(...),
     score: float = Form(...),
-    job: str = Form(...),
-    missing_skills: str = Form(...)
+    job_title: str = Form(...),
+    missing_skills: Optional[str] = Form(None)
 ):
     db = SessionLocal()
 
@@ -125,7 +128,7 @@ async def apply_candidate(
         # duplicate check
         existing = db.query(Candidate).filter(
             Candidate.email == email,
-            Candidate.job_id == job_id
+            Candidate.job_title == job_title
         ).first()
 
         if existing:
@@ -136,9 +139,8 @@ async def apply_candidate(
             name=name,
             email=email,
             phone=phone,
-            job_id=job_id,
             score=score,
-            domain=job,
+            job_title=job_title,
             missing_skills=missing_skills
             
         )

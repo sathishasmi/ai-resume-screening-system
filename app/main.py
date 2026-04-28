@@ -46,12 +46,12 @@ async def home(request: Request):
     )
 
 @app.get("/recruiter", response_class=HTMLResponse)
-async def recruiter_page(request: Request):
+def recruiter_page(request: Request):
     return templates.TemplateResponse(
         request,
         "recruiter.html",
         {"request": request}
-    )
+        )
 
 # -----------------------------
 # Include APIs
@@ -62,7 +62,7 @@ app.include_router(recruiter_router)
 # DB Init
 # -----------------------------
 from app.core.database import Base, engine
-from app.models import candidate, analysis, job
+from app.models import candidate,job
 
 Base.metadata.create_all(bind=engine)
 print("TABLES CREATED")

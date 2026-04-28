@@ -1,6 +1,4 @@
-# models/candidate.py
-
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean
 from app.core.database import Base
 
 class Candidate(Base):
@@ -10,7 +8,9 @@ class Candidate(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False)
     phone = Column(String(20))
+    job_title = Column(String(255))
     score = Column(Integer)
-    domain = Column(String(255))
     missing_skills = Column(String)
+
     selected = Column(Boolean, default=False)
+    reason = Column(String(255),nullable=True) 
