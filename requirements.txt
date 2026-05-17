@@ -12,3 +12,4 @@ pandas==2.3.3
 torch
 gdown==6.0.0
 psycopg2-binary
+sqlalchemy
