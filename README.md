@@ -142,7 +142,9 @@ to generate semantic similarity scores.
 3. Extract Skills
 4. Generate Embeddings
 5. Compare with Job Description
-6. Generate Match Score
+6. Calculate Match Score & ATS Score
+7. Store Candidate & Application Data in PostgreSQL
+8. Display Applied Candidates in Recruiter Dashboard
 
 ---
 
