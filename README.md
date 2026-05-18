@@ -38,11 +38,11 @@ This project uses custom datasets for training and testing the AI Resume Screeni
 
 ![Homepage](assets/image1.png)
 
-## App Screenshot 2 (ATS Score)
+## Screenshot 2 (ATS Score)
 
 ![candidate_dashboard](assets/image2.png)
 
-## App Screenshot 3 (Recruiter Dashboard)
+## Screenshot 3 (Recruiter Dashboard)
 
 ![Recruiter_dashboard](assets/image3.png)
 
