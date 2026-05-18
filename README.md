@@ -3,6 +3,12 @@
 An AI-powered Resume Screening System built using FastAPI, Machine Learning, and PostgreSQL.
 This system analyzes resumes, calculates ATS scores, predicts top matching domains, and allows candidates to apply for jobs. Recruiters can view applied candidates through a recruiter dashboard.
 
+# Datasets
+
+This project uses custom datasets for training and testing the AI Resume Screening model.
+
+ats_dataset.csv	:- Main dataset containing resumes, job descriptions, and matching scores.
+gpt_dataset.csv :-	An AI-generated dataset used to improve resume-job similarity training. The raw data is cleaned, processed, and transformed into ats_dataset.csv, which is used for final model training and similarity prediction.
 
 ---
 
@@ -21,12 +27,16 @@ This system analyzes resumes, calculates ATS scores, predicts top matching domai
 
 ---
 ## Live Demo
-https://ai-resume-screening-system-38ju.onrender.com/
-https://ai-resume-screening-system-38ju.onrender.com/recruiter
 
-## Screenshot 1 (Home page)
+### Candidate Homepage
+#### https://ai-resume-screening-system-38ju.onrender.com/
 
-![Home page](assets/image1.png)
+### Recruiter Dashboard
+#### https://ai-resume-screening-system-38ju.onrender.com/recruiter
+
+## Screenshot 1 (Homepage)
+
+![Homepage](assets/image1.png)
 
 ## App Screenshot 2 (ATS Score)
 
