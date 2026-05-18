@@ -7,8 +7,8 @@ This system analyzes resumes, calculates ATS scores, predicts top matching domai
 
 This project uses custom datasets for training and testing the AI Resume Screening model.
 
-ats_dataset.csv	:- Main dataset containing resumes, job descriptions, and matching scores.
-gpt_dataset.csv :-	An AI-generated dataset used to improve resume-job similarity training. The raw data is cleaned, processed, and transformed into ats_dataset.csv, which is used for final model training and similarity prediction.
+##### ats_dataset.csv -> Main dataset containing resumes, job descriptions, and matching scores.
+##### gpt_dataset.csv -> An AI-generated dataset used to improve resume-job similarity training. The raw data is cleaned, processed, and transformed into ats_dataset.csv, which is used for final model training and similarity prediction.
 
 ---
 
